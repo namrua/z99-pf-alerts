@@ -62,18 +62,18 @@ export default class TelegramMessageBuilder {
         const totalSniperSolBought = topBuyers.filter(el => el.tradeType == 1).reduce((sum, el) => sum + el.totalSolBought, 0);
         const totalSniperSolBuyPercent = topBuyers.filter(el => el.tradeType == 1).reduce((sum, el) => sum + el.buyPercent, 0);
 
-        const top20FirstBuyers = topBuyers.slice(0, 20);
-        const countHold = top20FirstBuyers.filter(buyer => buyer.status === 0).length;
-        const countSoldPart = top20FirstBuyers.filter(buyer => buyer.status === 1).length;
-        const countSoldOut = top20FirstBuyers.filter(buyer => buyer.status === 2).length
+        const top70FirstBuyers = topBuyers.slice(0, 70);
+        const countHold = top70FirstBuyers.filter(buyer => buyer.status === 0).length;
+        const countSoldPart = top70FirstBuyers.filter(buyer => buyer.status === 1).length;
+        const countSoldOut = top70FirstBuyers.filter(buyer => buyer.status === 2).length
 
-        const totalBuy = top20FirstBuyers.reduce((acc, buyer) => acc + buyer.buyPercent, 0);
-        const totalSell = top20FirstBuyers.reduce((acc, buyer) => acc + buyer.sellPercent, 0);
+        const totalBuy = top70FirstBuyers.reduce((acc, buyer) => acc + buyer.buyPercent, 0);
+        const totalSell = top70FirstBuyers.reduce((acc, buyer) => acc + buyer.sellPercent, 0);
          return `<code>Early</code>: 
  ├Sniper: ${countSniper} ${countSniper > 0 ? `<code>buy</code> ${Utils.roundDecimals(totalSniperSolBuyPercent, 1)}% <code>with</code> ${Utils.roundDecimals(totalSniperSolBought, 1)} SOL` : ''}
  ├Bundle: ${countBundle} ${countBundle > 0 ? `<code>buy</code> ${Utils.roundDecimals(totalBundleSolBuyPercent, 1)}% <code>with</code> ${Utils.roundDecimals(totalBundleSolBought, 1)} SOL` : ''}
  ├<code>Sum 🅑:</code>${Number(totalBuy.toFixed(1))}% | <code>Sum 🅢:</code> ${Number(totalSell.toFixed())}%
-${this.buildTopBuyerStatus(top20FirstBuyers)} └🔴 Hold ${countHold} | 🟡 Sold part ${countSoldPart} | 🟢 Sold ${countSoldOut}\n`
+${this.buildTopBuyerStatus(top70FirstBuyers)} └🔴 Hold ${countHold} | 🟡 Sold part ${countSoldPart} | 🟢 Sold ${countSoldOut}\n`
     }
 
     private static buildTopBuyerStatus(topBuyers: TopBuyer[]): string {

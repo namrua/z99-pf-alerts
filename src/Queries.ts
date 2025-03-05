@@ -76,7 +76,7 @@ export const ClickHouseQuery = {
                         ORDER BY t.tokenPrice DESC 
                         LIMIT 1`,
 
-    GET_TOP_20_FIRST_BUYER: `WITH UsersWithMixedActions AS (
+    GET_TOP_70_FIRST_BUYER: `WITH UsersWithMixedActions AS (
                 SELECT 
                     userId, 
                     blockNumber 
@@ -140,7 +140,7 @@ export const ClickHouseQuery = {
                     END AS tradeType 
                 FROM FinalTrades
                 ORDER BY blockNumber, offsetNumber
-                LIMIT 50
+                LIMIT 80
             ),
 
             BuySellInfo AS (

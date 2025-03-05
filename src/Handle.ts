@@ -18,7 +18,7 @@ const processingMint45k: string[] = [];
 const groupId45k = -1002356898871;
 const processingKOTH: string[] = [];
 const groupIdKOTH = -1002185859518;
-const groupIdTokenBonded = 1002337411158;
+const groupIdTokenBonded = -1002337411158;
 
 var firstAlertBuffer: any[] = [];
 

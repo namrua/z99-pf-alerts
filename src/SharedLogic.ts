@@ -61,7 +61,7 @@ export const sendNotification = async (mintId: string, currentToken: any, reachM
       const [topHolder, deployerHolding, top20FirstBuyer] = await Promise.all([
         MevxService.getTopHolder(mintId),
         OnchainDataService.getTokenAccountBalance(currentToken?.wallet, mintId),
-        ClickHouseService.queryMany<UserFirstBuyInfo>(ClickHouseQuery.GET_TOP_20_FIRST_BUYER, { mintId, deployerId: deployerId }),
+        ClickHouseService.queryMany<UserFirstBuyInfo>(ClickHouseQuery.GET_TOP_70_FIRST_BUYER, { mintId, deployerId: deployerId }),
       ]) as unknown as [MevxTopHolder, number, UserFirstBuyInfo[]];
 
       const excludedHolders = [pairId, '5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1', '24Uqj9JCLxUeoC3hGfh5W3s9FM9uCHDS2SG3LYwBpyTi'];
