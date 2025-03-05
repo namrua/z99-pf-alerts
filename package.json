@@ -1,0 +1,42 @@
+{
+  "name": "pf-twitter-alert",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "dev": "node ./build/server.js",
+    "start": "npm run build && npm run dev serve watch",
+    "serve": "node build/server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@clickhouse/client": "^1.7.0",
+    "@project-serum/anchor": "^0.26.0",
+    "@solana/web3.js": "^1.92.3",
+    "@types/cors": "^2.8.13",
+    "axios": "^1.7.7",
+    "body-parser": "^1.20.3",
+    "express": "^4.21.1",
+    "kafkajs": "^2.2.4",
+    "kue": "^0.11.6",
+    "mysql2": "^3.12.0",
+    "node-telegram-bot-api": "^0.66.0",
+    "uuid": "^11.0.2"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.8.6",
+    "@types/node-telegram-bot-api": "^0.64.7",
+    "@types/uuid": "^10.0.0",
+    "concurrently": "^9.0.1",
+    "cors": "^2.8.5",
+    "cpx": "^1.5.0",
+    "ioredis": "^5.4.1",
+    "nodemon": "^3.1.7",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  }
+}
