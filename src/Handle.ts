@@ -6,8 +6,9 @@ import { Program, AnchorProvider, Wallet } from "@project-serum/anchor";
 import { PublicKey, Connection, Keypair, Commitment } from "@solana/web3.js";
 import IDL from "./idl.json";
 
-const kafkaBroker = "49.12.174.250:9092";
-// const kafkaBroker = "64.130.50.149:9092";
+//const kafkaBroker = "49.12.174.250:9092";
+//kafka prod
+const kafkaBroker = "64.130.50.149:9092";
 const tradeTopic = "sol-tx";
 const processingMint15k: string[] = [];
 const groupId15k = -1002367157410;
@@ -19,7 +20,6 @@ const processingKOTH: string[] = [];
 const groupIdKOTH = -1002185859518;
 const groupIdTokenBonded = 1002337411158;
 
-var tradingBuffer: any[] = [];
 var firstAlertBuffer: any[] = [];
 
 const keyPair = Keypair.generate();

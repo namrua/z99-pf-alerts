@@ -18,7 +18,7 @@ export default class MevxService {
                     { 'Referer': 'https://mevx.io/' }
             });
             if (response.status === 200 && response.data) {
-                redisPub.set(cacheKey, JSON.stringify(response.data), "EX", 60);
+                redisPub.set(cacheKey, JSON.stringify(response.data), "EX", 86400);
                 return response.data;
             }
         } catch (error) {
