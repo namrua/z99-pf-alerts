@@ -108,7 +108,7 @@ class Handle {
             const filteredRequests30k = tradingRequests.filter(item => (item.exchange == "pump" && ["buy", "sell"].includes(item.trade_type))
                 && item.price_in_usd > 0.00003 && item.price_in_usd < 0.000045);
             const filteredRequests45k = tradingRequests.filter(item => (item.exchange == "pump" && ["buy", "sell"].includes(item.trade_type))
-                && item.quote_amount * item.quote_price_in_usd / item.token_amount > 0.000045);
+                && item.price_in_usd > 0.000045 && item.price_in_usd < 0.0001);
             const filteredRequestsKOTH = tradingRequests.filter(item => (item.exchange == "pump" && ["buy", "sell"].includes(item.trade_type))
                 && item.quote_amount / item.token_amount > 0.0000002);
             await Promise.all([

@@ -60,7 +60,7 @@ export const sendNotification = async (mintId: string, currentToken: any, reachM
     if (mevxTokenMetadata && mevxTokenMetadata.tokenPrice > 0) {
       const [topHolder, deployerHolding, top20FirstBuyer] = await Promise.all([
         MevxService.getTopHolder(mintId),
-        OnchainDataService.getTokenAccountBalance(currentToken?.wallet, mintId),
+        currentToken && currentToken.wallet ? OnchainDataService.getTokenAccountBalance(currentToken?.wallet, mintId) : null,
         ClickHouseService.queryMany<UserFirstBuyInfo>(ClickHouseQuery.GET_TOP_70_FIRST_BUYER, { mintId, deployerId: deployerId }),
       ]) as unknown as [MevxTopHolder, number, UserFirstBuyInfo[]];
 
