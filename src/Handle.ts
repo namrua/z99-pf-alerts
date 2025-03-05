@@ -124,7 +124,7 @@ class Handle {
 
     onCompleteEvent = async (data: any) => {
         const mintId = data.mint.toBase58();
-        await sendNotification(mintId, null, Constant.Z99_ALERT_BONDED, groupIdTokenBonded);
+        await sendNotification(mintId, null, Constant.Z99_ALERT_BONDED, groupIdTokenBonded, true);
     }
 }
 export default Handle;

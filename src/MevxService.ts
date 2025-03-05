@@ -18,7 +18,7 @@ export default class MevxService {
                     { 'Referer': 'https://mevx.io/' }
             });
             if (response.status === 200 && response.data) {
-                redisPub.set(cacheKey, JSON.stringify(response.data), "EX", 86400);
+                redisPub.set(cacheKey, JSON.stringify(response.data), "EX", 60);
                 return response.data;
             }
         } catch (error) {
@@ -26,8 +26,15 @@ export default class MevxService {
         }
     }
 
-    public static async getMetaData(mintId: string): Promise<MevxTokenMetaData> {
+    public static async getMetaData(mintId: string, isCachedDisable?: boolean): Promise<MevxTokenMetaData> {
         try {
+            const cacheKey = `mevx:metaData:${mintId}`;
+            if (!isCachedDisable) {
+                const cachedData = await redisPub.get(cacheKey);
+                if (cachedData) {
+                    return JSON.parse(cachedData);
+                }
+            }
             const url = `https://api-fe.mevx.io/api/token/metadata/sol/${mintId}`;
             const response = await axiosInstance.get(url, {
                 headers:
@@ -41,6 +48,7 @@ export default class MevxService {
                 if (metaData.startTime && metaData.startTime.toString().length > 10) {
                   metaData.startTime = Math.round(metaData.startTime / 1000);
                 }
+                redisPub.set(cacheKey, JSON.stringify(metaData), "EX", 86400);
                 return metaData
             }
         } catch (error) {

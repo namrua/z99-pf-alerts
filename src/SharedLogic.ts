@@ -21,7 +21,7 @@ export const subscribeEvent = async (): Promise<void> => {
   kafkaService.startIntervalJob();
 };
 
-export const handleReachMCap = async (filteredUniqueRequests: any[], mintsProcessing: string[], reachMcap: string, groupId: number) => {
+export const handleReachMCap = async (filteredUniqueRequests: any[], mintsProcessing: string[], reachMcap: string, groupId: number, isCachedDisable?: boolean) => {
   const pipeline = redisPub.pipeline();
   if (filteredUniqueRequests && filteredUniqueRequests.length > 0) {
     filteredUniqueRequests.forEach((el) => {
@@ -41,7 +41,7 @@ export const handleReachMCap = async (filteredUniqueRequests: any[], mintsProces
           const isMintProcessing = mintsProcessing.includes(mintId);
           if (!isMintProcessing) {
             mintsProcessing.push(mintId);
-            await sendNotification(mintId, currentToken, reachMcap, groupId);
+            await sendNotification(mintId, currentToken, reachMcap, groupId, isCachedDisable);
             mintsProcessing = mintsProcessing.filter(mint => mint !== mintId);
           }
         }
@@ -50,9 +50,9 @@ export const handleReachMCap = async (filteredUniqueRequests: any[], mintsProces
   }
 };
 
-export const sendNotification = async (mintId: string, currentToken: any, reachMcap: string, groupId: number) => {
+export const sendNotification = async (mintId: string, currentToken: any, reachMcap: string, groupId: number, isDisableCache?: boolean) => {
   try {
-    let mevxTokenMetadata = await MevxService.getMetaData(mintId);
+    let mevxTokenMetadata = await MevxService.getMetaData(mintId, isDisableCache);
     const pairId = mevxTokenMetadata?.pairAddress;
     const decimals = mevxTokenMetadata?.tokenDecimal;
     const totalSupply = mevxTokenMetadata?.totalSupply;
@@ -109,7 +109,7 @@ export const sendNotification = async (mintId: string, currentToken: any, reachM
           website: mevxTokenMetadata.urlInfo?.website,
           discord: mevxTokenMetadata.urlInfo?.discord,
         },
-        mCap: Utils.roundDecimals((currentToken.price_in_usd) * totalSupply, 2),
+        mCap: (currentToken && currentToken.price_in_usd) ? Utils.roundDecimals((currentToken.price_in_usd) * totalSupply, 2) : Utils.roundDecimals((mevxTokenMetadata.tokenPriceUsd) * totalSupply, 2),
         security: {
           insiders: userRoles.find(role => role.userType === 'insider')?.userCount || 0,
           kols: userRoles.find(role => role.userType === 'kol')?.userCount || 0,
