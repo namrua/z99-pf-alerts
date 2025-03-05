@@ -45,7 +45,7 @@ class Handle {
 
     async fetchData() {
         console.log('Fetching data from Kafka...');
-        const tradingConsumere = this.kafka.consumer({ groupId: `sol-tx-z99-pf-alerts-4` });
+        const tradingConsumere = this.kafka.consumer({ groupId: `sol-tx-z99-pf-alert` });
         await tradingConsumere.connect();
 
         await tradingConsumere.subscribe({ topic: tradeTopic, fromBeginning: false });
@@ -124,20 +124,7 @@ class Handle {
 
     onCompleteEvent = async (data: any) => {
         const mintId = data.mint.toBase58();
-        console.log("Token bonded", mintId);
         await sendNotification(mintId, null, Constant.Z99_ALERT_BONDED, groupIdTokenBonded);
-    }
-
-    delay(ms: number): Promise<void> {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    getUniqueTradingRequests(tradingRequests: any[]): any[] {
-        const uniqueRequests = new Map<string, any>();
-        for (const request of tradingRequests) {
-            uniqueRequests.set(request.token, request);
-        }
-        return Array.from(uniqueRequests.values());
     }
 }
 export default Handle;
