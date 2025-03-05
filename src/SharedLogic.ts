@@ -21,7 +21,7 @@ export const subscribeEvent = async (): Promise<void> => {
   kafkaService.startIntervalJob();
 };
 
-export const handleReachMCap = async (filteredUniqueRequests: any[], mintsProcessing: string[], reachMcap: string, groupId: number, isCachedDisable?: boolean) => {
+export const handleReachMCap = async (filteredUniqueRequests: any[], mintsProcessing: string[], reachMcap: string, groupId: number) => {
   const pipeline = redisPub.pipeline();
   if (filteredUniqueRequests && filteredUniqueRequests.length > 0) {
     filteredUniqueRequests.forEach((el) => {
@@ -41,7 +41,7 @@ export const handleReachMCap = async (filteredUniqueRequests: any[], mintsProces
           const isMintProcessing = mintsProcessing.includes(mintId);
           if (!isMintProcessing) {
             mintsProcessing.push(mintId);
-            await sendNotification(mintId, currentToken, reachMcap, groupId, isCachedDisable);
+            await sendNotification(mintId, currentToken, reachMcap, groupId);
             mintsProcessing = mintsProcessing.filter(mint => mint !== mintId);
           }
         }
@@ -71,15 +71,14 @@ export const sendNotification = async (mintId: string, currentToken: any, reachM
       const topHolderDetailsQuery = buildeGetTopHolderDetailsQuery(top10HolderIds, mintId);
       const userTradedQuery = buildTradedUserQuery(top20HolderIds);
 
-      const [directFreshWallets, userTradedDB, dexInfo, userRoles, deployerHistory, topHolderDetails, tokensByDev] = await Promise.all([
+      const [directFreshWallets, userTradedDB, dexInfo, userRoles, deployerHistory, topHolderDetails] = await Promise.all([
         getFreshWallets(top20HolderIds, pairId),
         ClickHouseService.queryMany<any>(userTradedQuery, {}),
         DexscreenerService.getDexscreenerData(mintId),
         ClickHouseService.queryMany<UserRole>(ClickHouseQuery.COUNT_USER_ROLES, { mintId }),
         ClickHouseService.query<DeployerHistory>(ClickHouseQuery.GET_DEPLOYER_HISTORY, { mintId }),
         ClickHouseService.queryMany<TopHolderDetails>(topHolderDetailsQuery, {}),
-        ClickHouseService.queryMany<TokenByDev>(ClickHouseQuery.GET_TOKEN_BY_DEV, { mintId })
-      ]) as unknown as [any[], any[], DexscreenerData, UserRole[], DeployerHistory, TopHolderDetails[], TokenByDev[]];
+      ]) as unknown as [any[], any[], DexscreenerData, UserRole[], DeployerHistory, TopHolderDetails[]];
 
       const userTraded = userTradedDB?.map(el => el.userId);
       const userNotTradedYet = top20HolderIds.filter(item => !userTraded?.includes(item));
