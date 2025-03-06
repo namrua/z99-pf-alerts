@@ -110,7 +110,7 @@ class Handle {
             const filteredRequests45k = tradingRequests.filter(item => (item.exchange == "pump" && ["buy", "sell"].includes(item.trade_type))
                 && item.price_in_usd > 0.000045 && item.price_in_usd < 0.0001);
             const filteredRequestsKOTH = tradingRequests.filter(item => (item.exchange == "pump" && ["buy", "sell"].includes(item.trade_type))
-                && item.quote_amount / item.token_amount > 0.0000002);
+                && item.quote_amount / item.token_amount > 0.0000002 && item.price_in_usd < 0.0001);
             await Promise.all([
                 filteredRequests15k && filteredRequests15k.length > 0 ? handleReachMCap(filteredRequests15k, processingMint15k, Constant.Z99_ALERT_15K, groupId15k) : null,
                 filteredRequests30k && filteredRequests30k.length > 0 ? handleReachMCap(filteredRequests30k, processingMint30k, Constant.Z99_ALERT_30K, groupId30k) : null,
