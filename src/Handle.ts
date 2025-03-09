@@ -50,7 +50,7 @@ class Handle {
         }, 2000);
         setInterval(async () => {
             await this.handleDevSoldAlert();
-        }, 10000);
+        }, 5000);
     }
 
     async fetchData() {
