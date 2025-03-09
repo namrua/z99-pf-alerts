@@ -44,7 +44,7 @@ export default class TelegramMessageBuilder {
         result += this.getChartMessage(res.mintId);
         const buttons: Button[][] = [
             [{text: `🚀MevX(Web)`, url: `https://mevx.io/solana/${res.mintId}?ref=kdq9n2LcYEDa`},{ text: `⚡️MevX(Bot)`, url: `https://t.me/MevxTradingBot?start=${res.mintId}-kdq9n2LcYEDa` }],
-            [{text: `Follow all alert channels`, url: `https://t.me/addlist/qJZX06_EaiQ0YmQ1`}]
+            [{text: `Follow all alert channels`, url: `https://t.me/addlist/Lhyfjz5eNTcyYjc1`}]
         ];
         return { message: result, keyboard: this.buildKeyboard(buttons) };
     }
