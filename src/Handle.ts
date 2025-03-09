@@ -137,7 +137,7 @@ class Handle {
         try {
             const tradingRequests = devSoldAlertBuffer;
             devSoldAlertBuffer = [];
-            const devSoldRequest = tradingRequests.filter(item => item.exchange == "pump" && item.trade_type == "sell" && item.token_amount > 5000000);
+            const devSoldRequest = tradingRequests.filter(item => item.exchange == "pump" && item.trade_type == "sell" && item.token_amount > 5000000 && item.price_in_usd > 0.000015);
             await this.handleDevSold(devSoldRequest);
         } catch (error) {
             console.error('Error handling first alert:', error);
