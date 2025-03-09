@@ -1,10 +1,13 @@
 import { Kafka, logLevel } from "kafkajs";
-import { redisPub } from "./RedisService";
-import { handleReachMCap, sendNotification } from "./SharedLogic";
+import { redisPub, TOKEN_TTL_SECONDS } from "./RedisService";
+import { buildGetDeployerIdsQuery, handleReachMCap, sendNotification } from "./SharedLogic";
 import { Constant } from "./Constant";
 import { Program, AnchorProvider, Wallet } from "@project-serum/anchor";
 import { PublicKey, Connection, Keypair, Commitment } from "@solana/web3.js";
 import IDL from "./idl.json";
+import { ClickHouseService } from "./ClickHouseService";
+import { DeployerInfo } from "./DatabaseReponseModel";
+import { OnchainDataService } from "./OnchainDataService";
 
 //const kafkaBroker = "49.12.174.250:9092";
 //kafka prod
@@ -19,8 +22,12 @@ const groupId45k = -1002356898871;
 const processingKOTH: string[] = [];
 const groupIdKOTH = -1002185859518;
 const groupIdTokenBonded = -1002337411158;
+const groupIdDevSold = -1002220601309;
+let processingMintDevSold: string[] = [];
 
-var firstAlertBuffer: any[] = [];
+var mCapAlertBuffer: any[] = [];
+var devSoldAlertBuffer: any[] = [];
+
 
 const keyPair = Keypair.generate();
 const launchpadProgramId = new PublicKey("6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P");
@@ -39,8 +46,11 @@ class Handle {
 
     async startIntervalJob() {
         setInterval(async () => {
-            await this.handleAlert();
+            await this.handleMCapAlert();
         }, 2000);
+        setInterval(async () => {
+            await this.handleDevSoldAlert();
+        }, 10000);
     }
 
     async fetchData() {
@@ -72,7 +82,8 @@ class Handle {
                         resolveOffset(message.offset);
                     }
                     if (parsedMessages.length > 0) {
-                        firstAlertBuffer = firstAlertBuffer.concat(parsedMessages);
+                        mCapAlertBuffer = mCapAlertBuffer.concat(parsedMessages);
+                        devSoldAlertBuffer = devSoldAlertBuffer.concat(parsedMessages);
                     }
 
                     await commitOffsetsIfNecessary();
@@ -99,10 +110,10 @@ class Handle {
         program.addEventListener("CompleteEvent", this.onCompleteEvent);
     }
 
-    async handleAlert() {
+    async handleMCapAlert() {
         try {
-            const tradingRequests = firstAlertBuffer;
-            firstAlertBuffer = [];
+            const tradingRequests = mCapAlertBuffer;
+            mCapAlertBuffer = [];
             const filteredRequests15k = tradingRequests.filter(item => (item.exchange == "pump" && ["buy", "sell"].includes(item.trade_type))
                 && item.price_in_usd > 0.000015 && item.price_in_usd < 0.00003);
             const filteredRequests30k = tradingRequests.filter(item => (item.exchange == "pump" && ["buy", "sell"].includes(item.trade_type))
@@ -121,6 +132,56 @@ class Handle {
             console.error('Error handling first alert:', error);
         }
     }
+
+    async handleDevSoldAlert() {
+        try {
+            const tradingRequests = devSoldAlertBuffer;
+            devSoldAlertBuffer = [];
+            const devSoldRequest = tradingRequests.filter(item => item.exchange == "pump" && item.trade_type == "sell" && item.token_amount > 5000000);
+            await this.handleDevSold(devSoldRequest);
+        } catch (error) {
+            console.error('Error handling first alert:', error);
+        }
+    }
+
+    handleDevSold = async (tradingRequest: any[]) => {
+        try {
+            const listMintsDistinct = Array.from(new Set(tradingRequest.map(item => item.token)));
+            if (listMintsDistinct.length === 0) return;
+            const deployerIdsQuery = buildGetDeployerIdsQuery(listMintsDistinct);
+            const deployersByMint = await ClickHouseService.queryMany<DeployerInfo>(deployerIdsQuery, {});
+            if (deployersByMint) {
+                const filteredRequests = tradingRequest.filter(item =>
+                    deployersByMint.some(deployer => deployer.mintId === item.token && deployer.deployerId === item.wallet)
+                );
+                const devSoldRequest = filteredRequests.map(item => {
+                    return {
+                        mintId: item.token,
+                        deployerId: item.wallet
+                    }
+                });
+                if (devSoldRequest.length === 0) return;
+                const devSoldCached = await redisPub.mget(devSoldRequest.map(item => `devSold_${item.mintId}`));
+                const unsendRequest = devSoldRequest.filter((val, index) => devSoldCached[index] === null);
+                for (let item of unsendRequest) {
+                    const tokenBalance = await OnchainDataService.getTokenAccountBalance(item?.deployerId, item.mintId);
+                    if (tokenBalance == 0) {
+                        //send notification
+                        const isMintProcessing = processingMintDevSold.includes(item.mintId);
+                        if (!isMintProcessing) {
+                            processingMintDevSold.push(item.mintId);
+                            await sendNotification(item.mintId, null, Constant.Z99_ALERT_DEVSOLD, groupIdDevSold, true);
+                            await redisPub.setex(`devSold_${item.mintId}`, TOKEN_TTL_SECONDS, item.mintId);
+                            processingMintDevSold = processingMintDevSold.filter(mint => mint !== item.mintId);
+                        }
+                    }
+                }
+                // console.log("dev sold request: ", result);
+            }
+        } catch (error) {
+            console.error("Error in handleDevSold", error);
+        }
+    };
 
     onCompleteEvent = async (data: any) => {
         const mintId = data.mint.toBase58();

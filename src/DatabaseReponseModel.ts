@@ -81,3 +81,8 @@ export interface TokenByDev {
   mintId: string;
   type: string;
 }
+
+export interface DeployerInfo {
+  mintId: string;
+  deployerId: string;
+}

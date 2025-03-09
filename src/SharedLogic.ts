@@ -2,13 +2,13 @@ import { RedisTokenCached, TokenReachMCapResponse, TopHolder } from "./ReponseMo
 import TelegramMessageBuilder from "./TelegramMessageBuilder";
 import TelegramMessageSender from "./TelegramMessageSender";
 import Utils from "./Utils";
-import { ClickHouseService, MySQLService } from "./ClickHouseService";
-import { CATH, DeployerHistory, TokenByDev, TopHolderDetails, TradingTokenInfo, UserFirstBuyInfo, UserRole } from "./DatabaseReponseModel";
+import { ClickHouseService } from "./ClickHouseService";
+import { DeployerHistory, TopHolderDetails, UserFirstBuyInfo, UserRole } from "./DatabaseReponseModel";
 import { ClickHouseQuery } from "./Queries";
 import { redisPub, TOKEN_TTL_SECONDS } from "./RedisService";
 import { OnchainDataService } from "./OnchainDataService";
 import MevxService from "./MevxService";
-import { BotInfo, DexscreenerData, MevxTokenMetaData, MevxTopHolder, WallentBalance } from "./ExternalApiResponse";
+import { DexscreenerData, MevxTopHolder } from "./ExternalApiResponse";
 import Handle from "./Handle";
 import DexscreenerService from "./DexscreenerService";
 
@@ -41,7 +41,7 @@ export const handleReachMCap = async (filteredUniqueRequests: any[], mintsProces
           const isMintProcessing = mintsProcessing.includes(mintId);
           if (!isMintProcessing) {
             mintsProcessing.push(mintId);
-            await sendNotification(mintId, currentToken, reachMcap, groupId);
+            await sendNotification(mintId, currentToken?.price_in_usd, reachMcap, groupId);
             mintsProcessing = mintsProcessing.filter(mint => mint !== mintId);
           }
         }
@@ -50,7 +50,7 @@ export const handleReachMCap = async (filteredUniqueRequests: any[], mintsProces
   }
 };
 
-export const sendNotification = async (mintId: string, currentToken: any, reachMcap: string, groupId: number, isDisableCache?: boolean) => {
+export const sendNotification = async (mintId: string, currentPriceInUsd: any, reachMcap: string, groupId: number, isDisableCache?: boolean) => {
   try {
     let mevxTokenMetadata = await MevxService.getMetaData(mintId, isDisableCache);
     const pairId = mevxTokenMetadata?.pairAddress;
@@ -60,7 +60,7 @@ export const sendNotification = async (mintId: string, currentToken: any, reachM
     if (mevxTokenMetadata && mevxTokenMetadata.tokenPrice > 0) {
       const [topHolder, deployerHolding, top20FirstBuyer] = await Promise.all([
         MevxService.getTopHolder(mintId),
-        currentToken && currentToken.wallet ? OnchainDataService.getTokenAccountBalance(currentToken?.wallet, mintId) : null,
+        OnchainDataService.getTokenAccountBalance(deployerId, mintId),
         ClickHouseService.queryMany<UserFirstBuyInfo>(ClickHouseQuery.GET_TOP_70_FIRST_BUYER, { mintId, deployerId: deployerId }),
       ]) as unknown as [MevxTopHolder, number, UserFirstBuyInfo[]];
 
@@ -108,7 +108,7 @@ export const sendNotification = async (mintId: string, currentToken: any, reachM
           website: mevxTokenMetadata.urlInfo?.website,
           discord: mevxTokenMetadata.urlInfo?.discord,
         },
-        mCap: (currentToken && currentToken.price_in_usd) ? Utils.roundDecimals((currentToken.price_in_usd) * totalSupply, 2) : Utils.roundDecimals((mevxTokenMetadata.tokenPriceUsd) * totalSupply, 2),
+        mCap: currentPriceInUsd ? Utils.roundDecimals(currentPriceInUsd * totalSupply, 2) : Utils.roundDecimals((mevxTokenMetadata.tokenPriceUsd) * totalSupply, 2),
         security: {
           insiders: userRoles.find(role => role.userType === 'insider')?.userCount || 0,
           kols: userRoles.find(role => role.userType === 'kol')?.userCount || 0,
@@ -228,6 +228,12 @@ SELECT
 FROM FreshWallet fw
 WHERE fw.userId IN (SELECT userId from user_list)`;
 
+  return query;
+}
+
+export const buildGetDeployerIdsQuery = (mintIds: string[]): any => {
+  const query = `select ti.mintId, ti.deployerId from TokenInfo ti 
+where ti.mintId in (${mintIds.map(id => `'${id}'`).join(', ')})`;
   return query;
 }
 
