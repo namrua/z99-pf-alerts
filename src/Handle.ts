@@ -1,5 +1,5 @@
 import { Kafka, logLevel } from "kafkajs";
-import { redisPub, TOKEN_TTL_SECONDS } from "./RedisService";
+import { datFakeRedisPub, redisPub, TOKEN_TTL_SECONDS } from "./RedisService";
 import { buildGetDeployerIdsQuery, handleReachMCap, sendNotification } from "./SharedLogic";
 import { Constant } from "./Constant";
 import { Program, AnchorProvider, Wallet } from "@project-serum/anchor";
@@ -48,9 +48,9 @@ class Handle {
         setInterval(async () => {
             await this.handleMCapAlert();
         }, 2000);
-        setInterval(async () => {
-            await this.handleDevSoldAlert();
-        }, 5000);
+        // setInterval(async () => {
+        //     await this.handleDevSoldAlert();
+        // }, 5000);
     }
 
     async fetchData() {
@@ -83,7 +83,7 @@ class Handle {
                     }
                     if (parsedMessages.length > 0) {
                         mCapAlertBuffer = mCapAlertBuffer.concat(parsedMessages);
-                        devSoldAlertBuffer = devSoldAlertBuffer.concat(parsedMessages);
+                        // devSoldAlertBuffer = devSoldAlertBuffer.concat(parsedMessages);
                     }
 
                     await commitOffsetsIfNecessary();
@@ -185,7 +185,15 @@ class Handle {
 
     onCompleteEvent = async (data: any) => {
         const mintId = data.mint.toBase58();
-        await sendNotification(mintId, null, Constant.Z99_ALERT_BONDED, groupIdTokenBonded, true);
+        if (mintId) {
+            try {
+                await datFakeRedisPub.publish("token-bonded", mintId);
+                console.log("publish token_bonded: ", mintId);
+            } catch (error) {
+                console.log("fail when publish token_bonded ", mintId);
+            }
+            await sendNotification(mintId, null, Constant.Z99_ALERT_BONDED, groupIdTokenBonded, true);
+        }
     }
 }
 export default Handle;
