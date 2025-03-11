@@ -71,14 +71,15 @@ export const sendNotification = async (mintId: string, currentPriceInUsd: any, r
       const topHolderDetailsQuery = buildeGetTopHolderDetailsQuery(top10HolderIds, mintId);
       const userTradedQuery = buildTradedUserQuery(top20HolderIds);
 
-      const [directFreshWallets, userTradedDB, dexInfo, userRoles, deployerHistory, topHolderDetails] = await Promise.all([
+      const [directFreshWallets, userTradedDB, dexInfo, userRoles, deployerHistory, topHolderDetails, dbTokenPrice] = await Promise.all([
         getFreshWallets(top20HolderIds, pairId),
         ClickHouseService.queryMany<any>(userTradedQuery, {}),
         DexscreenerService.getDexscreenerData(mintId),
         ClickHouseService.queryMany<UserRole>(ClickHouseQuery.COUNT_USER_ROLES, { mintId }),
         ClickHouseService.query<DeployerHistory>(ClickHouseQuery.GET_DEPLOYER_HISTORY, { mintId }),
         ClickHouseService.queryMany<TopHolderDetails>(topHolderDetailsQuery, {}),
-      ]) as unknown as [any[], any[], DexscreenerData, UserRole[], DeployerHistory, TopHolderDetails[]];
+        ClickHouseService.query<any>(ClickHouseQuery.GET_TOKEN_PRICE, { mintId }),
+      ]) as unknown as [any[], any[], DexscreenerData, UserRole[], DeployerHistory, TopHolderDetails[], any];
 
       const userTraded = userTradedDB?.map(el => el.userId);
       const userNotTradedYet = top20HolderIds.filter(item => !userTraded?.includes(item));
@@ -108,7 +109,7 @@ export const sendNotification = async (mintId: string, currentPriceInUsd: any, r
           website: mevxTokenMetadata.urlInfo?.website,
           discord: mevxTokenMetadata.urlInfo?.discord,
         },
-        mCap: currentPriceInUsd ? Utils.roundDecimals(currentPriceInUsd * totalSupply, 2) : Utils.roundDecimals((mevxTokenMetadata.tokenPriceUsd) * totalSupply, 2),
+        mCap: dbTokenPrice ? Utils.roundDecimals(Number(dbTokenPrice.tokenPrice) * totalSupply, 2) : Utils.roundDecimals((mevxTokenMetadata.tokenPriceUsd) * totalSupply, 2),
         security: {
           insiders: userRoles.find(role => role.userType === 'insider')?.userCount || 0,
           kols: userRoles.find(role => role.userType === 'kol')?.userCount || 0,

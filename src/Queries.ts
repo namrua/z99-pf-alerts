@@ -221,5 +221,10 @@ export const ClickHouseQuery = {
         JOIN TokenPairs tp ON ti.mintId = tp.mintId
         WHERE deployerId = targetDeployerId
         ORDER BY ti.createdDate DESC 
-        LIMIT 30`
+        LIMIT 30`,
+
+    GET_TOKEN_PRICE: `SELECT t.tokenPrice FROM Trading t 
+        WHERE t.mintId = '{mintId}'
+        ORDER BY t.createdDate DESC 
+        LIMIT 1`
 }
