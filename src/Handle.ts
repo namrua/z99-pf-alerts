@@ -1,5 +1,5 @@
 import { Kafka, logLevel } from "kafkajs";
-import { datFakeRedisPub, redisPub, TOKEN_TTL_SECONDS } from "./RedisService";
+import { datFakeRedisPub, redisPub, redisSub, TOKEN_TTL_SECONDS } from "./RedisService";
 import { buildGetDeployerIdsQuery, handleReachMCap, sendNotification } from "./SharedLogic";
 import { Constant } from "./Constant";
 import { Program, AnchorProvider, Wallet } from "@project-serum/anchor";
@@ -23,6 +23,7 @@ const processingKOTH: string[] = [];
 const groupIdKOTH = -1002185859518;
 const groupIdTokenBonded = -1002337411158;
 const groupIdDevSold = -1002220601309;
+const groupIdSafeMigration = -1002474461607;
 let processingMintDevSold: string[] = [];
 
 var mCapAlertBuffer: any[] = [];
@@ -94,6 +95,19 @@ class Handle {
             },
         });
 
+        //redis subcriber
+        redisSub.subscribe("token_bonded", (err, count) => {
+            if (err) {
+                console.error("Failed to subscribe:", err);
+            } else {
+                console.log(`Subscribed to ${count} channel(s). Listening for updates...`);
+            }
+        });
+
+        redisSub.on("message", async (channel, message) => {
+            console.log(`Received from ${channel}:`, message);
+            await this.onSafeMigration(message);
+        });
 
         const connection = new Connection(rpc, {
             wsEndpoint: rpc.replace("https", "wss"),
@@ -194,6 +208,10 @@ class Handle {
             }
             await sendNotification(mintId, null, Constant.Z99_ALERT_BONDED, groupIdTokenBonded, true);
         }
+    }
+
+    onSafeMigration = async (mintId: string) => {
+        await sendNotification(mintId, null, Constant.Z99_ALERT_SAFE_MIGRATION, groupIdSafeMigration, true);
     }
 }
 export default Handle;

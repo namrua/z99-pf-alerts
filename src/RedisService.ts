@@ -13,5 +13,6 @@ const datfakeRedis = {
 };
 
 export const redisPub = new Redis(redisConfig);
+export const redisSub = new Redis(redisConfig);
 export const datFakeRedisPub = new Redis(datfakeRedis);
 export const TOKEN_TTL_SECONDS = 60 * 24 * 60 * 60;
