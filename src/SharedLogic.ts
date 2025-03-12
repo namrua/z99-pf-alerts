@@ -74,7 +74,7 @@ export const sendNotification = async (mintId: string, currentPriceInUsd: any, r
       const [directFreshWallets, userTradedDB, dexInfo, userRoles, deployerHistory, topHolderDetails, dbTokenPrice] = await Promise.all([
         getFreshWallets(top20HolderIds, pairId),
         ClickHouseService.queryMany<any>(userTradedQuery, {}),
-        DexscreenerService.getDexscreenerData(mintId),
+        DexscreenerService.getDexscreenerData(mintId, isDisableCache),
         ClickHouseService.queryMany<UserRole>(ClickHouseQuery.COUNT_USER_ROLES, { mintId }),
         ClickHouseService.query<DeployerHistory>(ClickHouseQuery.GET_DEPLOYER_HISTORY, { mintId }),
         ClickHouseService.queryMany<TopHolderDetails>(topHolderDetailsQuery, {}),

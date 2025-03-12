@@ -56,7 +56,7 @@ class Handle {
         }, 5000);
         setInterval(async () => {
             await this.handleDexPaid();
-        }, 20000);
+        }, 15000);
     }
 
     async fetchData() {
@@ -224,10 +224,12 @@ class Handle {
             const dexData = await DexscreenerService.getLastestFromDexscreener();
             if (dexData) {
                 for (let item of dexData) {
-                    const dexTokenCached = await redisPub.get(`dexPaid_${item.chainId}_${item.tokenAddress}`);
-                    if (dexTokenCached === null) {
-                        await sendNotification(item.tokenAddress, null, Constant.Z99_ALERT_DEX_PAID, groupIdDexPaid, true);
-                        await redisPub.setex(`dexPaid_${item.chainId}_${item.tokenAddress}`, TOKEN_TTL_SECONDS, item.tokenAddress);
+                    if (item.chainId === "solana") {
+                        const dexTokenCached = await redisPub.get(`dexPaid_${item.chainId}_${item.tokenAddress}`);
+                        if (dexTokenCached === null) {
+                            await sendNotification(item.tokenAddress, null, Constant.Z99_ALERT_DEX_PAID, groupIdDexPaid, true);
+                            await redisPub.setex(`dexPaid_${item.chainId}_${item.tokenAddress}`, TOKEN_TTL_SECONDS, item.tokenAddress);
+                        }
                     }
                 }
             }

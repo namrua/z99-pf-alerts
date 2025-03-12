@@ -3,11 +3,13 @@ import { DexscreenerSecurity, DexscreenerUpdatedData } from "./ExternalApiRespon
 import { redisPub } from "./RedisService";
 
 export default class DexscreenerService {
-    public static async getDexscreenerData(mintId: string): Promise<DexscreenerSecurity> {
+    public static async getDexscreenerData(mintId: string, isDisableCache?: boolean): Promise<DexscreenerSecurity> {
         const cachedKey = `dexscreener:${mintId}`;
-        const cachedData = await redisPub.get(cachedKey);
-        if (cachedData) {
-            return JSON.parse(cachedData);
+        if (!isDisableCache) {
+            const cachedData = await redisPub.get(cachedKey);
+            if (cachedData) {
+                return JSON.parse(cachedData);
+            }
         }
         const url = `https://api.dexscreener.com/orders/v1/solana/${mintId}`;
         const response = await axios.get(url);
@@ -26,7 +28,7 @@ export default class DexscreenerService {
         try {
             const url = `https://api.dexscreener.com/token-profiles/latest/v1`;
             const response = await axios.get(url);
-            if(response.status === 200 && response.data) {
+            if (response.status === 200 && response.data) {
                 const data = response.data as DexscreenerUpdatedData[];
                 return data;
             }
