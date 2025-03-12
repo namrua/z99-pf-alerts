@@ -19,7 +19,7 @@ export default class TelegramMessageBuilder {
                 }
             }
         }
-        let result = `<a href ="https://pump.fun/coin/${res.mintId}">${res.name} (${res.symbol})</a>
+        let result = `${res.title ? res.title + ": ": ""}<a href ="https://pump.fun/coin/${res.mintId}">${res.name} (${res.symbol})</a>
 <code>${res.mintId}</code>\n
 <code>MCap:</code> <b>${Utils.shortenNumber(res.mCap)}</b> | ⌛️ ${Utils.convertSecondToHumanTime((Date.now() / 1000) - res.createdDate)} | <a href ="https://x.com/search?f=live&q=(${res.symbol}%20OR%20${res.mintId}%20OR%20url:${res.mintId})&src=typed_query">Search on 𝕏</a>
 <code>Dev: </code>${res.devSold.holdingPercent === 0 ? '✅ <b>(sold)</b>' : `❌ <b>(${res.devSold.holdingPercent}% left)</b>`}

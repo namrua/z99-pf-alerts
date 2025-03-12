@@ -28,6 +28,7 @@ export interface TwitterContent {
 }
 
 export interface TokenReachMCapResponse {
+    title: string;
     name: string;
     symbol: string;
     deployerId?: string;

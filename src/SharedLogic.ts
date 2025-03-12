@@ -21,7 +21,7 @@ export const subscribeEvent = async (): Promise<void> => {
   kafkaService.startIntervalJob();
 };
 
-export const handleReachMCap = async (filteredUniqueRequests: any[], mintsProcessing: string[], reachMcap: string, groupId: number) => {
+export const handleReachMCap = async (filteredUniqueRequests: any[], mintsProcessing: string[], reachMcap: string, title: string, groupId: number) => {
   const pipeline = redisPub.pipeline();
   if (filteredUniqueRequests && filteredUniqueRequests.length > 0) {
     filteredUniqueRequests.forEach((el) => {
@@ -41,7 +41,7 @@ export const handleReachMCap = async (filteredUniqueRequests: any[], mintsProces
           const isMintProcessing = mintsProcessing.includes(mintId);
           if (!isMintProcessing) {
             mintsProcessing.push(mintId);
-            await sendNotification(mintId, currentToken?.price_in_usd, reachMcap, groupId);
+            await sendNotification(mintId, currentToken?.price_in_usd, reachMcap, title, groupId);
             mintsProcessing = mintsProcessing.filter(mint => mint !== mintId);
           }
         }
@@ -50,7 +50,7 @@ export const handleReachMCap = async (filteredUniqueRequests: any[], mintsProces
   }
 };
 
-export const sendNotification = async (mintId: string, currentPriceInUsd: any, reachMcap: string, groupId: number, isDisableCache?: boolean) => {
+export const sendNotification = async (mintId: string, currentPriceInUsd: any, reachMcap: string, title: string, groupId: number, isDisableCache?: boolean) => {
   try {
     let mevxTokenMetadata = await MevxService.getMetaData(mintId, isDisableCache);
     const pairId = mevxTokenMetadata?.pairAddress;
@@ -98,6 +98,7 @@ export const sendNotification = async (mintId: string, currentPriceInUsd: any, r
       });
 
       const result: TokenReachMCapResponse = {
+        title: title,
         name: mevxTokenMetadata.name,
         symbol: mevxTokenMetadata.symbol,
         mintId: mintId,

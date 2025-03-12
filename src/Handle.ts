@@ -142,10 +142,10 @@ class Handle {
             const filteredRequestsKOTH = tradingRequests.filter(item => (item.exchange == "pump" && ["buy", "sell"].includes(item.trade_type))
                 && item.quote_amount / item.token_amount > 0.0000002 && item.price_in_usd < 0.0001);
             await Promise.all([
-                filteredRequests15k && filteredRequests15k.length > 0 ? handleReachMCap(filteredRequests15k, processingMint15k, Constant.Z99_ALERT_15K, groupId15k) : null,
-                filteredRequests30k && filteredRequests30k.length > 0 ? handleReachMCap(filteredRequests30k, processingMint30k, Constant.Z99_ALERT_30K, groupId30k) : null,
-                filteredRequests45k && filteredRequests45k.length > 0 ? handleReachMCap(filteredRequests45k, processingMint45k, Constant.Z99_ALERT_45K, groupId45k) : null,
-                filteredRequestsKOTH && filteredRequestsKOTH.length > 0 ? handleReachMCap(filteredRequestsKOTH, processingKOTH, Constant.Z99_ALERT_KOTH, groupIdKOTH) : null,
+                filteredRequests15k && filteredRequests15k.length > 0 ? handleReachMCap(filteredRequests15k, processingMint15k, Constant.Z99_ALERT_15K, '', groupId15k) : null,
+                filteredRequests30k && filteredRequests30k.length > 0 ? handleReachMCap(filteredRequests30k, processingMint30k, Constant.Z99_ALERT_30K, '', groupId30k) : null,
+                filteredRequests45k && filteredRequests45k.length > 0 ? handleReachMCap(filteredRequests45k, processingMint45k, Constant.Z99_ALERT_45K, '', groupId45k) : null,
+                filteredRequestsKOTH && filteredRequestsKOTH.length > 0 ? handleReachMCap(filteredRequestsKOTH, processingKOTH, Constant.Z99_ALERT_KOTH, '', groupIdKOTH) : null,
             ])
         } catch (error) {
             console.error('Error handling first alert:', error);
@@ -189,7 +189,7 @@ class Handle {
                         const isMintProcessing = processingMintDevSold.includes(item.mintId);
                         if (!isMintProcessing) {
                             processingMintDevSold.push(item.mintId);
-                            await sendNotification(item.mintId, null, Constant.Z99_ALERT_DEVSOLD, groupIdDevSold, true);
+                            await sendNotification(item.mintId, null, Constant.Z99_ALERT_DEVSOLD, "🔥 Detected Dev sold", groupIdDevSold, true);
                             await redisPub.setex(`devSold_${item.mintId}`, TOKEN_TTL_SECONDS, item.mintId);
                             processingMintDevSold = processingMintDevSold.filter(mint => mint !== item.mintId);
                         }
@@ -211,12 +211,12 @@ class Handle {
             } catch (error) {
                 console.log("fail when publish token_bonded ", mintId);
             }
-            await sendNotification(mintId, null, Constant.Z99_ALERT_BONDED, groupIdTokenBonded, true);
+            await sendNotification(mintId, null, Constant.Z99_ALERT_BONDED, '✅ Token migration completed', groupIdTokenBonded, true);
         }
     }
 
     onSafeMigration = async (mintId: string) => {
-        await sendNotification(mintId, null, Constant.Z99_ALERT_SAFE_MIGRATION, groupIdSafeMigration, true);
+        await sendNotification(mintId, null, Constant.Z99_ALERT_SAFE_MIGRATION, '🚀 Token safe migration', groupIdSafeMigration, true);
     }
 
     handleDexPaid = async () => {
@@ -227,7 +227,7 @@ class Handle {
                     if (item.chainId === "solana") {
                         const dexTokenCached = await redisPub.get(`dexPaid_${item.chainId}_${item.tokenAddress}`);
                         if (dexTokenCached === null) {
-                            await sendNotification(item.tokenAddress, null, Constant.Z99_ALERT_DEX_PAID, groupIdDexPaid, true);
+                            await sendNotification(item.tokenAddress, null, Constant.Z99_ALERT_DEX_PAID, '🔥 Detected PAID DEXScreener', groupIdDexPaid, true);
                             await redisPub.setex(`dexPaid_${item.chainId}_${item.tokenAddress}`, TOKEN_TTL_SECONDS, item.tokenAddress);
                         }
                     }
