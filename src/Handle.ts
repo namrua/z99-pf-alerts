@@ -8,6 +8,7 @@ import IDL from "./idl.json";
 import { ClickHouseService } from "./ClickHouseService";
 import { DeployerInfo } from "./DatabaseReponseModel";
 import { OnchainDataService } from "./OnchainDataService";
+import DexscreenerService from "./DexscreenerService";
 
 //const kafkaBroker = "49.12.174.250:9092";
 //kafka prod
@@ -24,6 +25,7 @@ const groupIdKOTH = -1002185859518;
 const groupIdTokenBonded = -1002337411158;
 const groupIdDevSold = -1002220601309;
 const groupIdSafeMigration = -1002474461607;
+const groupIdDexPaid = -1002305781763;
 let processingMintDevSold: string[] = [];
 
 var mCapAlertBuffer: any[] = [];
@@ -49,9 +51,12 @@ class Handle {
         setInterval(async () => {
             await this.handleMCapAlert();
         }, 2000);
-        // setInterval(async () => {
-        //     await this.handleDevSoldAlert();
-        // }, 5000);
+        setInterval(async () => {
+            await this.handleDevSoldAlert();
+        }, 5000);
+        setInterval(async () => {
+            await this.handleDexPaid();
+        }, 1000);
     }
 
     async fetchData() {
@@ -212,6 +217,23 @@ class Handle {
 
     onSafeMigration = async (mintId: string) => {
         await sendNotification(mintId, null, Constant.Z99_ALERT_SAFE_MIGRATION, groupIdSafeMigration, true);
+    }
+
+    handleDexPaid = async () => {
+        try {
+            const dexData = await DexscreenerService.getLastestFromDexscreener();
+            if (dexData) {
+                for (let item of dexData) {
+                    const dexTokenCached = await redisPub.get(`dexPaid_${item.chainId}_${item.tokenAddress}`);
+                    if (dexTokenCached === null) {
+                        await sendNotification(item.tokenAddress, null, Constant.Z99_ALERT_DEX_PAID, groupIdDexPaid, true);
+                        await redisPub.setex(`dexPaid_${item.chainId}_${item.tokenAddress}`, TOKEN_TTL_SECONDS, item.tokenAddress);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error handling dex paid:', error);
+        }
     }
 }
 export default Handle;

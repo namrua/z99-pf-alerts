@@ -8,7 +8,7 @@ import { ClickHouseQuery } from "./Queries";
 import { redisPub, TOKEN_TTL_SECONDS } from "./RedisService";
 import { OnchainDataService } from "./OnchainDataService";
 import MevxService from "./MevxService";
-import { DexscreenerData, MevxTopHolder } from "./ExternalApiResponse";
+import { DexscreenerSecurity, MevxTopHolder } from "./ExternalApiResponse";
 import Handle from "./Handle";
 import DexscreenerService from "./DexscreenerService";
 
@@ -79,7 +79,7 @@ export const sendNotification = async (mintId: string, currentPriceInUsd: any, r
         ClickHouseService.query<DeployerHistory>(ClickHouseQuery.GET_DEPLOYER_HISTORY, { mintId }),
         ClickHouseService.queryMany<TopHolderDetails>(topHolderDetailsQuery, {}),
         ClickHouseService.query<any>(ClickHouseQuery.GET_TOKEN_PRICE, { mintId }),
-      ]) as unknown as [any[], any[], DexscreenerData, UserRole[], DeployerHistory, TopHolderDetails[], any];
+      ]) as unknown as [any[], any[], DexscreenerSecurity, UserRole[], DeployerHistory, TopHolderDetails[], any];
 
       const userTraded = userTradedDB?.map(el => el.userId);
       const userNotTradedYet = top20HolderIds.filter(item => !userTraded?.includes(item));

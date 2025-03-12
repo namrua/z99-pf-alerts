@@ -19,9 +19,15 @@ export interface BotInfo {
     sum: number;
 }
 
-export interface DexscreenerData {
+export interface DexscreenerSecurity {
     dexPaid: boolean;
     cto: boolean;
+}
+
+export interface DexscreenerUpdatedData{
+    url:string;
+    chainId:string;
+    tokenAddress:string;
 }
 
 export interface UrlInfo {
