@@ -56,7 +56,7 @@ class Handle {
         }, 5000);
         setInterval(async () => {
             await this.handleDexPaid();
-        }, 1000);
+        }, 20000);
     }
 
     async fetchData() {
