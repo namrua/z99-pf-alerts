@@ -89,7 +89,7 @@ class Handle {
                     }
                     if (parsedMessages.length > 0) {
                         mCapAlertBuffer = mCapAlertBuffer.concat(parsedMessages);
-                        // devSoldAlertBuffer = devSoldAlertBuffer.concat(parsedMessages);
+                        devSoldAlertBuffer = devSoldAlertBuffer.concat(parsedMessages);
                     }
 
                     await commitOffsetsIfNecessary();
