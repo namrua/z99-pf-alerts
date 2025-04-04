@@ -264,7 +264,7 @@ class Handle {
                         const newItems = solFilteredData.slice(0, checkpointIndex);
                         newItems.forEach(async item => {
                             console.log("send notification dex boosts: ", item.tokenAddress);
-                            // await sendNotification(item.tokenAddress, null, Constant.Z99_ALERT_DEX_BOOSTS, `Boost ⚡️<code>${item.amount}</code> in total ⚡️<code>${item.totalAmount}</code>`, groupIdDexBoots, false);
+                            await sendNotification(item.tokenAddress, null, Constant.Z99_ALERT_DEX_BOOSTS, `Boost ⚡️<code>${item.amount}</code> in total ⚡️<code>${item.totalAmount}</code>`, groupIdDexBoots, false);
                         });
                         lastCheckpointDexBoosts = solFilteredData.slice(0, 3).map(item => item.tokenAddress);
                         await redisPub.setex("dexBoost_lastCheckpoint", TOKEN_TTL_SECONDS, JSON.stringify(lastCheckpointDexBoosts));
