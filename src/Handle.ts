@@ -260,9 +260,9 @@ class Handle {
                 }
                 const newItems = checkpointIndex === -1 ? dexData : dexData.slice(0, checkpointIndex);
                 newItems.forEach(async item => {
-                    await sendNotification(item.tokenAddress, null, Constant.Z99_ALERT_DEX_BOOSTS, `⚡️ boost <code>${item.amount}</code> in total ⚡️<code>${item.totalAmount}</code>`, groupIdDexBoots, false);
+                    await sendNotification(item.tokenAddress, null, Constant.Z99_ALERT_DEX_BOOSTS, `Boost ⚡️<code>${item.amount}</code> in total ⚡️<code>${item.totalAmount}</code>`, groupIdDexBoots, false);
                 });
-                lastCheckpointDexBoosts = dexData.slice(0,3).map(item => item.tokenAddress);
+                lastCheckpointDexBoosts = dexData.filter(el => el.chainId == 'solana').slice(0, 3).map(item => item.tokenAddress);
                 await redisPub.setex("dexBoosts_lastCheckpoint", TOKEN_TTL_SECONDS, JSON.stringify(lastCheckpointDexBoosts));
             }
         } catch (error) {
