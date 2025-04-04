@@ -26,6 +26,7 @@ const groupIdTokenBonded = -1002337411158;
 const groupIdDevSold = -1002220601309;
 const groupIdSafeMigration = -1002474461607;
 const groupIdDexPaid = -1002305781763;
+const groupIdDexBoots = -1002673280001;
 let processingMintDevSold: string[] = [];
 
 var mCapAlertBuffer: any[] = [];
@@ -56,6 +57,9 @@ class Handle {
         }, 5000);
         setInterval(async () => {
             await this.handleDexPaid();
+        }, 15000);
+        setInterval(async () => {
+            await this.handleDexBoots();
         }, 15000);
     }
 
@@ -221,7 +225,7 @@ class Handle {
 
     handleDexPaid = async () => {
         try {
-            const dexData = await DexscreenerService.getLastestFromDexscreener();
+            const dexData = await DexscreenerService.getLastestTokenProfileFromDexscreener();
             if (dexData) {
                 for (let item of dexData) {
                     if (item.chainId === "solana") {
@@ -237,5 +241,44 @@ class Handle {
             console.error('Error handling dex paid:', error);
         }
     }
+
+    handleDexBoots = async () => {
+        try {
+            const dexData = await DexscreenerService.getLastestTokenBoostsFromDexscreener();
+            if (dexData) {
+                let lastCheckpointDexBoosts: string[] = [];
+                if (dexData.length < 3) {
+                    return;
+                }
+                const lastCheckpointDexBoostsCached = await redisPub.get("dexBoosts_lastCheckpoint");
+                if (lastCheckpointDexBoostsCached) {
+                    lastCheckpointDexBoosts = JSON.parse(lastCheckpointDexBoostsCached) as string[];
+                }
+                const checkpointIndex = this.findCheckpointIndex(dexData, lastCheckpointDexBoosts);
+                if (checkpointIndex === 0) {
+                    return;
+                }
+                const newItems = checkpointIndex === -1 ? dexData : dexData.slice(0, checkpointIndex);
+                newItems.forEach(async item => {
+                    await sendNotification(item.tokenAddress, null, Constant.Z99_ALERT_DEX_BOOSTS, `⚡️ boost <code>${item.amount}</code> in total ⚡️<code>${item.totalAmount}</code>`, groupIdDexBoots, false);
+                });
+                lastCheckpointDexBoosts = dexData.slice(0,3).map(item => item.tokenAddress);
+                await redisPub.setex("dexBoosts_lastCheckpoint", TOKEN_TTL_SECONDS, JSON.stringify(lastCheckpointDexBoosts));
+            }
+        } catch (error) {
+            console.error('Error handling dex paid:', error);
+        }
+    }
+
+    findCheckpointIndex(response: any[], checkpoint: string[]): number {
+        for (let i = 0; i <= response.length - checkpoint.length; i++) {
+            const slice = response.slice(i, i + checkpoint.length).map(item => item.tokenAddress);
+            if (slice.join('|') === checkpoint.join('|')) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
 }
 export default Handle;

@@ -24,10 +24,12 @@ export interface DexscreenerSecurity {
     cto: boolean;
 }
 
-export interface DexscreenerUpdatedData{
-    url:string;
-    chainId:string;
-    tokenAddress:string;
+export interface DexscreenerUpdatedData {
+    url: string;
+    chainId: string;
+    tokenAddress: string;
+    totalAmount: string;
+    amount: string;
 }
 
 export interface UrlInfo {

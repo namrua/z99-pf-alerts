@@ -24,9 +24,22 @@ export default class DexscreenerService {
         return result;
     }
 
-    public static async getLastestFromDexscreener(): Promise<DexscreenerUpdatedData[] | undefined> {
+    public static async getLastestTokenProfileFromDexscreener(): Promise<DexscreenerUpdatedData[] | undefined> {
         try {
             const url = `https://api.dexscreener.com/token-profiles/latest/v1`;
+            const response = await axios.get(url);
+            if (response.status === 200 && response.data) {
+                const data = response.data as DexscreenerUpdatedData[];
+                return data;
+            }
+        } catch (error) {
+            console.error("Error fetching lastest dexscreener data:", error);
+        }
+    }
+
+    public static async getLastestTokenBoostsFromDexscreener(): Promise<DexscreenerUpdatedData[] | undefined> {
+        try {
+            const url = `https://api.dexscreener.com/token-boosts/latest/v1`;
             const response = await axios.get(url);
             if (response.status === 200 && response.data) {
                 const data = response.data as DexscreenerUpdatedData[];
