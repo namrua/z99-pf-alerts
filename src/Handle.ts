@@ -246,24 +246,30 @@ class Handle {
         try {
             const dexData = await DexscreenerService.getLastestTokenBoostsFromDexscreener();
             if (dexData) {
-                let lastCheckpointDexBoosts: string[] = [];
-                if (dexData.length < 3) {
-                    return;
+                const solFilteredData = dexData.filter(item => item.chainId === "solana");
+                if (solFilteredData.length > 0) {
+                    let lastCheckpointDexBoosts: string[] = [];
+                    if (solFilteredData.length < 3) {
+                        return;
+                    }
+                    const lastCheckpointDexBoostsCached = await redisPub.get("dexBoost_lastCheckpoint");
+                    if (lastCheckpointDexBoostsCached) {
+                        lastCheckpointDexBoosts = JSON.parse(lastCheckpointDexBoostsCached) as string[];
+                    }
+                    const checkpointIndex = this.findCheckpointIndex(solFilteredData, lastCheckpointDexBoosts);
+                    if (checkpointIndex === 0) {
+                        return;
+                    }
+                    if (checkpointIndex > 0) {
+                        const newItems = solFilteredData.slice(0, checkpointIndex);
+                        newItems.forEach(async item => {
+                            console.log("send notification dex boosts: ", item.tokenAddress);
+                            // await sendNotification(item.tokenAddress, null, Constant.Z99_ALERT_DEX_BOOSTS, `Boost ⚡️<code>${item.amount}</code> in total ⚡️<code>${item.totalAmount}</code>`, groupIdDexBoots, false);
+                        });
+                        lastCheckpointDexBoosts = solFilteredData.slice(0, 3).map(item => item.tokenAddress);
+                        await redisPub.setex("dexBoost_lastCheckpoint", TOKEN_TTL_SECONDS, JSON.stringify(lastCheckpointDexBoosts));
+                    }
                 }
-                const lastCheckpointDexBoostsCached = await redisPub.get("dexBoosts_lastCheckpoint");
-                if (lastCheckpointDexBoostsCached) {
-                    lastCheckpointDexBoosts = JSON.parse(lastCheckpointDexBoostsCached) as string[];
-                }
-                const checkpointIndex = this.findCheckpointIndex(dexData, lastCheckpointDexBoosts);
-                if (checkpointIndex === 0) {
-                    return;
-                }
-                const newItems = checkpointIndex === -1 ? dexData : dexData.slice(0, checkpointIndex);
-                newItems.forEach(async item => {
-                    await sendNotification(item.tokenAddress, null, Constant.Z99_ALERT_DEX_BOOSTS, `Boost ⚡️<code>${item.amount}</code> in total ⚡️<code>${item.totalAmount}</code>`, groupIdDexBoots, false);
-                });
-                lastCheckpointDexBoosts = dexData.filter(el => el.chainId == 'solana').slice(0, 3).map(item => item.tokenAddress);
-                await redisPub.setex("dexBoosts_lastCheckpoint", TOKEN_TTL_SECONDS, JSON.stringify(lastCheckpointDexBoosts));
             }
         } catch (error) {
             console.error('Error handling dex paid:', error);
