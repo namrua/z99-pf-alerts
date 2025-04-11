@@ -102,7 +102,7 @@ export const sendNotification = async (mintId: string, currentPriceInUsd: any, r
           website: mevxTokenMetadata.urlInfo?.website,
           discord: mevxTokenMetadata.urlInfo?.discord,
         },
-        mCap: dbTokenPrice ? Utils.roundDecimals(Number(dbTokenPrice.tokenPrice) * totalSupply, 2) : Utils.roundDecimals((mevxTokenMetadata.tokenPriceUsd) * totalSupply, 2),
+        mCap: currentPriceInUsd ? Utils.roundDecimals(Number(currentPriceInUsd) * totalSupply, 2) : Utils.roundDecimals(Number(dbTokenPrice.tokenPrice) * totalSupply, 2),
         security: {
           insiders: userRoles.find(role => role.userType === 'insider')?.userCount || 0,
           kols: userRoles.find(role => role.userType === 'kol')?.userCount || 0,
@@ -246,53 +246,53 @@ const buildeGetTopHolderDetailsQuery = (userIds: string[], mintId: string): stri
 
 const processTopFirstBuyer = (data: UserFirstBuyInfo[], chain: string) => {
   if (data && data.length > 0) {
-      const vpBlockNumber = data[0]?.vpBlockNumber;
-      const bundleSet = new Set<string>();
-      if (chain == 'sol') {
-          let lastIndex = null;
-          let bundleEnded = false;
-          const sortedSameBlock = data
-              .filter(item => item.blockNumber === vpBlockNumber)
-              .sort((a, b) => a.indexNumber - b.indexNumber);
+    const vpBlockNumber = data[0]?.vpBlockNumber;
+    const bundleSet = new Set<string>();
+    if (chain == 'sol') {
+      let lastIndex = null;
+      let bundleEnded = false;
+      const sortedSameBlock = data
+        .filter(item => item.blockNumber === vpBlockNumber)
+        .sort((a, b) => a.indexNumber - b.indexNumber);
 
-          for (let i = 0; i < sortedSameBlock.length; i++) {
-              const item = sortedSameBlock[i];
-              const key = `${item.blockNumber}-${item.indexNumber}`;
+      for (let i = 0; i < sortedSameBlock.length; i++) {
+        const item = sortedSameBlock[i];
+        const key = `${item.blockNumber}-${item.indexNumber}`;
 
-              if (bundleEnded) break;
+        if (bundleEnded) break;
 
-              if (lastIndex === null || item.indexNumber - lastIndex <= 64) {
-                  bundleSet.add(key);
-                  lastIndex = item.indexNumber;
-              } else {
-                  bundleEnded = true;
-              }
-          }
-
-          return data.map(item => {
-              const key = `${item.blockNumber}-${item.indexNumber}`;
-
-              if (item.blockNumber === vpBlockNumber && bundleSet.has(key)) {
-                  return { ...item, tradeType: 2 };
-              }
-
-              if (
-                  (item.blockNumber === vpBlockNumber && !bundleSet.has(key)) ||
-                  item.blockNumber === vpBlockNumber + 1
-              ) {
-                  return { ...item, tradeType: 1 };
-              }
-
-              return { ...item, tradeType: 0 };
-          });
+        if (lastIndex === null || item.indexNumber - lastIndex <= 64) {
+          bundleSet.add(key);
+          lastIndex = item.indexNumber;
+        } else {
+          bundleEnded = true;
+        }
       }
-      else {
-          return data.map(item => {
-              if (item.blockNumber === vpBlockNumber) {
-                  return { ...item, tradeType: 2 };
-              }
-              return { ...item, tradeType: 0 };
-          });
-      }
+
+      return data.map(item => {
+        const key = `${item.blockNumber}-${item.indexNumber}`;
+
+        if (item.blockNumber === vpBlockNumber && bundleSet.has(key)) {
+          return { ...item, tradeType: 2 };
+        }
+
+        if (
+          (item.blockNumber === vpBlockNumber && !bundleSet.has(key)) ||
+          item.blockNumber === vpBlockNumber + 1
+        ) {
+          return { ...item, tradeType: 1 };
+        }
+
+        return { ...item, tradeType: 0 };
+      });
+    }
+    else {
+      return data.map(item => {
+        if (item.blockNumber === vpBlockNumber) {
+          return { ...item, tradeType: 2 };
+        }
+        return { ...item, tradeType: 0 };
+      });
+    }
   }
 };
