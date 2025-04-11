@@ -58,9 +58,9 @@ class Handle {
         setInterval(async () => {
             await this.handleDexPaid();
         }, 15000);
-        setInterval(async () => {
-            await this.handleDexBoots();
-        }, 15000);
+        // setInterval(async () => {
+        //     await this.handleDexBoots();
+        // }, 15000);
     }
 
     async fetchData() {
