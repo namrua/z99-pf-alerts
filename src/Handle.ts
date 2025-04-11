@@ -58,9 +58,9 @@ class Handle {
         setInterval(async () => {
             await this.handleDexPaid();
         }, 15000);
-        // setInterval(async () => {
-        //     await this.handleDexBoots();
-        // }, 15000);
+        setInterval(async () => {
+            await this.handleDexBoots();
+        }, 15000);
     }
 
     async fetchData() {
@@ -266,17 +266,9 @@ class Handle {
                             console.log("send notification dex boosts: ", item.tokenAddress);
                             await sendNotification(item.tokenAddress, null, Constant.Z99_ALERT_DEX_BOOSTS, `Boost ⚡️<code>${item.amount}</code> in total ⚡️<code>${item.totalAmount}</code>`, groupIdDexBoots, false);
                         });
-                        lastCheckpointDexBoosts = solFilteredData.slice(0, 3).map(item => item.tokenAddress);
-                        await redisPub.setex("dexBoost_lastCheckpoint", TOKEN_TTL_SECONDS, JSON.stringify(lastCheckpointDexBoosts));
                     }
-                    else if (checkpointIndex < 0) {
-                        solFilteredData.forEach(async item => {
-                            console.log("send notification dex boosts: ", item.tokenAddress);
-                            await sendNotification(item.tokenAddress, null, Constant.Z99_ALERT_DEX_BOOSTS, `Boost ⚡️<code>${item.amount}</code> in total ⚡️<code>${item.totalAmount}</code>`, groupIdDexBoots, false);
-                        });
-                        lastCheckpointDexBoosts = solFilteredData.slice(0, 3).map(item => item.tokenAddress);
-                        await redisPub.setex("dexBoost_lastCheckpoint", TOKEN_TTL_SECONDS, JSON.stringify(lastCheckpointDexBoosts));
-                    }
+                    lastCheckpointDexBoosts = solFilteredData.slice(0, 3).map(item => item.tokenAddress);
+                    await redisPub.setex("dexBoost_lastCheckpoint", TOKEN_TTL_SECONDS, JSON.stringify(lastCheckpointDexBoosts));
                 }
             }
         } catch (error) {
