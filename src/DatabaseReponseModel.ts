@@ -48,8 +48,11 @@ export interface TradingTokenInfo {
 
 export interface UserFirstBuyInfo {
   tradeType: number;
+  blockNumber: number;
+  indexNumber: number;
+  vpBlockNumber: number;
   totalBuy: number;
-  totalSolBought: number;
+  totalQuoteBought: number;
   totalSell: number;
 }
 
@@ -71,7 +74,7 @@ export interface CATH {
 }
 
 export interface TopHolderDetails {
-  userId: string;
+  wallet: string;
   entryPrice: number;
   totalBuy: number;
   totalSell: number;

@@ -29,8 +29,7 @@ export default class TelegramMessageBuilder {
  ├🐁Insiders: <b>${res?.security.insiders}</b>
  └🌟KOLs: <b>${res?.security.kols}</b>
 <code>TH: </code><b>${Utils.shortenNumber(res.th?.count || 0)}</b> (total) | <code>Top 10:</code> <b>${res.th?.totalTop10}%</b> 
- ├${res.th?.detailTop10.map(th => `<a href="https://solscan.io/account/${th.address}">${th.percent}</a>`).join('|')}
- └<code>🌱Freshies:</code> <b>${res.freshies}</b>
+ └${res.th?.detailTop10.map(th => `<a href="https://solscan.io/account/${th.address}">${th.percent}</a>`).join('|')}
 <blockquote expandable><code><b>Top 10 in detail</b></code>
 <code>${Utils.padStrings('User', 7)} |${Utils.padStrings('MCap', 6)} |${Utils.padStrings('Buy', 5)} |${Utils.padStrings('Sell', 5)} |${Utils.padStrings('Left', 5)}</code>
 <code>${top10Details}</code>

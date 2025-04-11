@@ -76,45 +76,56 @@ export const ClickHouseQuery = {
                         ORDER BY t.tokenPrice DESC 
                         LIMIT 1`,
 
-    GET_TOP_70_FIRST_BUYER: `WITH UsersWithMixedActions AS (
+    GET_TOP_FIRST_BUYERS: `WITH UsersWithMixedActions AS (
                 SELECT 
-                    userId, 
+                    wallet, 
                     blockNumber 
-                FROM BCE.Trading 
-                WHERE mintId = '{mintId}'
-                GROUP BY userId, blockNumber 
-                HAVING COUNT(DISTINCT isBuy) > 1
+                FROM Z99SCAN.Trading 
+                WHERE token = '{mintId}'
+                GROUP BY wallet, blockNumber 
+                HAVING has(groupArray(tradeType), 1) AND 
+    					has(groupArray(tradeType), 2)
             ),
-
+            
+            ValidPair AS (
+            	SELECT t.token, t.blockNumber FROM Z99SCAN.Trading t
+            	WHERE t.token = '{mintId}' 
+            	AND t.tradeType = 3
+            	ORDER BY t.offsetNumber
+            	LIMIT 1
+            )
+            
+			,	
             RankedTrades AS (
                 SELECT 
-                    t.userId AS userId, 
-                    t.mintId AS mintId,
+                    t.wallet AS wallet, 
+                    t.token AS token,
                     t.blockNumber AS blockNumber, 
-                    tp.blockNumber AS tpBlockNumber,
+                    t.indexNumber,
+                    vp.blockNumber AS vpBlockNumber,
                     groupArray(t.offsetNumber) AS offsetNumbers,
                     min(t.offsetNumber) AS minOffset
-                FROM BCE.Trading t 
+                FROM Z99SCAN.Trading t 
                 LEFT JOIN UsersWithMixedActions uma 
-                    ON t.userId = uma.userId 
+                    ON t.wallet = uma.wallet 
                     AND t.blockNumber = uma.blockNumber 
-                JOIN TokenPairs tp 
-                    ON t.mintId = tp.mintId 
+                JOIN ValidPair vp 
+                    ON t.token = vp.token 
                 WHERE 
-                    (uma.userId = '' OR uma.userId IS NULL) 
-                    AND t.isBuy = 1 
-                    AND mintId = '{mintId}'
-                    AND tp.type IN ('pump', 'moonshot')
-                    AND t.userId != '{deployerId}'
-                GROUP BY t.userId, t.mintId, t.blockNumber, tp.blockNumber
+                    (uma.wallet = '' OR uma.wallet IS NULL) 
+                    AND t.tradeType = 1 
+                    AND token = '{mintId}'
+                    AND t.wallet != '{deployerId}'
+                GROUP BY t.wallet, t.token, t.blockNumber, vp.blockNumber, t.indexNumber
             ),
 
             FinalTrades AS (
                 SELECT 
-                    userId, 
-                    mintId, 
+                    wallet, 
+                    token, 
                     blockNumber, 
-                    tpBlockNumber,
+                    indexNumber,
+                    vpBlockNumber,
                     arrayJoin(offsetNumbers) AS offsetNumber,
                     arraySort(offsetNumbers) AS sortedOffsets,
                     indexOf(sortedOffsets, offsetNumber) AS currentIndex,
@@ -125,58 +136,53 @@ export const ClickHouseQuery = {
 
             SniperBundleUsers AS (
                 SELECT 
-                    userId, 
-                    mintId, 
+                    wallet, 
+                    token, 
                     offsetNumber, 
+                    indexNumber,
                     blockNumber, 
-                    tpBlockNumber,
-                    CASE 
-                        WHEN blockNumber = tpBlockNumber 
-                            AND (offsetNumber = minOffset OR offsetNumber = prevOffset + 1) 
-                        THEN 2 
-                        WHEN (blockNumber - tpBlockNumber) <= 3 
-                        THEN 1 
-                        ELSE 0 
-                    END AS tradeType 
+                    vpBlockNumber
                 FROM FinalTrades
                 ORDER BY blockNumber, offsetNumber
-                LIMIT 80
+                LIMIT 200
             ),
 
             BuySellInfo AS (
                 SELECT 
-                    t.userId,
-                    t.mintId,
-                    SUM(CASE WHEN t.isBuy = 1 THEN t.tokenAmount ELSE 0 END) AS totalBuy, 
-                    argMin(solAmount, blockNumber) AS totalSolBought, 
-                    SUM(CASE WHEN t.isBuy = 0 THEN t.tokenAmount ELSE 0 END) AS totalSell 
-                FROM Trading t 
+                    t.wallet,
+                    t.token,
+                    SUM(CASE WHEN t.tradeType = 1 THEN t.tokenAmount ELSE 0 END) AS totalBuy, 
+                    argMin(quoteAmount, blockNumber) AS totalQuoteBought, 
+                    SUM(CASE WHEN t.tradeType = 2 THEN t.tokenAmount ELSE 0 END) AS totalSell 
+                FROM Z99SCAN.Trading t 
                 JOIN SniperBundleUsers sbu 
-                    ON t.userId = sbu.userId
-                WHERE mintId = '{mintId}'
-                GROUP BY t.userId, t.mintId
+                    ON t.wallet = sbu.wallet
+                WHERE token = '{mintId}'
+                GROUP BY t.wallet, t.token
             )
 
             SELECT 
-                sbu.userId,
-                sbu.mintId,
-                sbu.tradeType,
+                sbu.wallet,
+                sbu.token,
+               	sbu.blockNumber,
+               	sbu.indexNumber,
+               	sbu.vpBlockNumber,
                 bsi.totalBuy,
-                bsi.totalSolBought,
+                bsi.totalQuoteBought,
                 bsi.totalSell
             FROM SniperBundleUsers sbu 
             JOIN BuySellInfo bsi 
-                ON sbu.userId = bsi.userId;`,
+                ON sbu.wallet = bsi.wallet`,
 
     COUNT_USER_ROLES: `SELECT 
                 ur.type AS userType, 
-                COUNT(DISTINCT t.userId) AS userCount
-            FROM BCE.Trading t 
-            LEFT JOIN BCE.UserRoles ur 
-                ON ur.userId = t.userId 
+                COUNT(DISTINCT t.wallet) AS userCount
+            FROM Z99SCAN.Trading t 
+            LEFT JOIN Z99SCAN.UserRoles ur 
+                ON ur.wallet = t.wallet 
             WHERE 
-                t.mintId = '{mintId}'
-                AND t.platformType IN (0, 1, 2) 
+                t.token = '{mintId}'
+                AND exchange IN ('pump')
                 AND ur.type IN ('insider', 'kol')
             GROUP BY ur.type;`,
 
@@ -208,11 +214,9 @@ export const ClickHouseQuery = {
     from user_profit up
     where up.profit > 0`,
     
-    GET_DEPLOYER_HISTORY: `WITH 
-    (SELECT DISTINCT deployerId FROM TokenInfo WHERE mintId = '{mintId}') AS targetDeployerId
-        SELECT COUNT( DISTINCT ti.mintId) AS made
-        FROM TokenInfo ti 
-        WHERE deployerId = targetDeployerId`,
+    GET_DEPLOYER_HISTORY: `SELECT COUNT(DISTINCT token) AS made
+        FROM Z99SCAN.TokenOwner 
+        WHERE wallet = '{deployerId}'`,
 
     GET_TOKEN_BY_DEV: `WITH 
     (SELECT DISTINCT deployerId FROM TokenInfo WHERE mintId = '{mintId}') AS targetDeployerId
@@ -223,8 +227,8 @@ export const ClickHouseQuery = {
         ORDER BY ti.createdDate DESC 
         LIMIT 30`,
 
-    GET_TOKEN_PRICE: `SELECT t.tokenPrice FROM Trading t 
-        WHERE t.mintId = '{mintId}'
+    GET_TOKEN_PRICE: `SELECT t.priceInUsd as tokenPrice FROM Z99SCAN.Trading t 
+        WHERE t.token = '9Z6v7py8CoyPMLVn4pA7oTGcbeFNm1hnLJbkSftTwcXx'
         ORDER BY t.createdDate DESC 
         LIMIT 1`
 }

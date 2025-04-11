@@ -172,7 +172,7 @@ class Handle {
             const listMintsDistinct = Array.from(new Set(tradingRequest.map(item => item.token)));
             if (listMintsDistinct.length === 0) return;
             const deployerIdsQuery = buildGetDeployerIdsQuery(listMintsDistinct);
-            const deployersByMint = await ClickHouseService.queryMany<DeployerInfo>(deployerIdsQuery, {});
+            const deployersByMint = await ClickHouseService.queryManyOldDb<DeployerInfo>(deployerIdsQuery, {});
             if (deployersByMint) {
                 const filteredRequests = tradingRequest.filter(item =>
                     deployersByMint.some(deployer => deployer.mintId === item.token && deployer.deployerId === item.wallet)
@@ -263,6 +263,14 @@ class Handle {
                     if (checkpointIndex > 0) {
                         const newItems = solFilteredData.slice(0, checkpointIndex);
                         newItems.forEach(async item => {
+                            console.log("send notification dex boosts: ", item.tokenAddress);
+                            await sendNotification(item.tokenAddress, null, Constant.Z99_ALERT_DEX_BOOSTS, `Boost ⚡️<code>${item.amount}</code> in total ⚡️<code>${item.totalAmount}</code>`, groupIdDexBoots, false);
+                        });
+                        lastCheckpointDexBoosts = solFilteredData.slice(0, 3).map(item => item.tokenAddress);
+                        await redisPub.setex("dexBoost_lastCheckpoint", TOKEN_TTL_SECONDS, JSON.stringify(lastCheckpointDexBoosts));
+                    }
+                    else if (checkpointIndex < 0) {
+                        solFilteredData.forEach(async item => {
                             console.log("send notification dex boosts: ", item.tokenAddress);
                             await sendNotification(item.tokenAddress, null, Constant.Z99_ALERT_DEX_BOOSTS, `Boost ⚡️<code>${item.amount}</code> in total ⚡️<code>${item.totalAmount}</code>`, groupIdDexBoots, false);
                         });

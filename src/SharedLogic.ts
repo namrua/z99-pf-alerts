@@ -58,36 +58,28 @@ export const sendNotification = async (mintId: string, currentPriceInUsd: any, r
     const totalSupply = mevxTokenMetadata?.totalSupply;
     const deployerId = mevxTokenMetadata?.owner;
     if (mevxTokenMetadata && mevxTokenMetadata.tokenPrice > 0) {
-      const [topHolder, deployerHolding, top20FirstBuyer] = await Promise.all([
+      const [topHolder, deployerHolding, topFirstBuyers] = await Promise.all([
         MevxService.getTopHolder(mintId),
         OnchainDataService.getTokenAccountBalance(deployerId, mintId),
-        ClickHouseService.queryMany<UserFirstBuyInfo>(ClickHouseQuery.GET_TOP_70_FIRST_BUYER, { mintId, deployerId: deployerId }),
+        ClickHouseService.queryMany<UserFirstBuyInfo>(ClickHouseQuery.GET_TOP_FIRST_BUYERS, { mintId, deployerId: deployerId }),
       ]) as unknown as [MevxTopHolder, number, UserFirstBuyInfo[]];
 
+      let firstBuyerProcessed = processTopFirstBuyer(topFirstBuyers, "sol");
       const excludedHolders = [pairId, '5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1', '24Uqj9JCLxUeoC3hGfh5W3s9FM9uCHDS2SG3LYwBpyTi'];
       const topHolderFiltered: TopHolder = processTopHolder(topHolder, excludedHolders, decimals, totalSupply);
       const top10HolderIds = topHolderFiltered.detailTop10.map((el: { address: string }) => el.address);
-      const top20HolderIds = topHolder.holders?.filter((item) => !excludedHolders.includes(item.wallet)).slice(0, 20).map((el: { wallet: string }) => el.wallet);
       const topHolderDetailsQuery = buildeGetTopHolderDetailsQuery(top10HolderIds, mintId);
-      const userTradedQuery = buildTradedUserQuery(top20HolderIds);
 
-      const [directFreshWallets, userTradedDB, dexInfo, userRoles, deployerHistory, topHolderDetails, dbTokenPrice] = await Promise.all([
-        getFreshWallets(top20HolderIds, pairId),
-        ClickHouseService.queryMany<any>(userTradedQuery, {}),
+      const [dexInfo, userRoles, deployerHistory, topHolderDetails, dbTokenPrice] = await Promise.all([
         DexscreenerService.getDexscreenerData(mintId, isDisableCache),
         ClickHouseService.queryMany<UserRole>(ClickHouseQuery.COUNT_USER_ROLES, { mintId }),
         ClickHouseService.query<DeployerHistory>(ClickHouseQuery.GET_DEPLOYER_HISTORY, { mintId }),
         ClickHouseService.queryMany<TopHolderDetails>(topHolderDetailsQuery, {}),
         ClickHouseService.query<any>(ClickHouseQuery.GET_TOKEN_PRICE, { mintId }),
-      ]) as unknown as [any[], any[], DexscreenerSecurity, UserRole[], DeployerHistory, TopHolderDetails[], any];
-
-      const userTraded = userTradedDB?.map(el => el.userId);
-      const userNotTradedYet = top20HolderIds.filter(item => !userTraded?.includes(item));
-      const userNotTradedYetMapped = userNotTradedYet.map(id => ({ userId: id }));
-      const totalFreshWallets = directFreshWallets.concat(userNotTradedYetMapped);
+      ]) as unknown as [DexscreenerSecurity, UserRole[], DeployerHistory, TopHolderDetails[], any];
 
       topHolderFiltered.detailTop10 = topHolderFiltered.detailTop10.map(holder => {
-        const holderDetail = topHolderDetails.find(detail => detail.userId === holder.address);
+        const holderDetail = topHolderDetails.find(detail => detail.wallet === holder.address);
         return {
           ...holder,
           remaining: (holder?.remaining ?? 0),
@@ -122,14 +114,13 @@ export const sendNotification = async (mintId: string, currentPriceInUsd: any, r
         devSold: {
           holdingPercent: Utils.roundDecimals((deployerHolding / totalSupply) * 100, 2)
         },
-        topBuyers: top20FirstBuyer?.map((buyer: UserFirstBuyInfo) => ({
+        topBuyers: firstBuyerProcessed?.map((buyer: UserFirstBuyInfo) => ({
           tradeType: buyer.tradeType,
           status: caculateStatusTopBuyer(buyer.totalBuy, buyer.totalSell, totalSupply),
           buyPercent: Utils.roundDecimals(((buyer.totalBuy * 100) / totalSupply), 2),
           sellPercent: Utils.roundDecimals(((buyer.totalSell * 100) / totalSupply), 2),
-          totalSolBought: buyer.totalSolBought
+          totalSolBought: buyer.totalQuoteBought
         })),
-        freshies: `${totalFreshWallets.length}/20`,
       }
       const currentTokenPriceInSol = mevxTokenMetadata.tokenPriceUsd / mevxTokenMetadata.solPrice;
       const messageReplyId = await sendTelegramMessage(result, groupId);
@@ -239,32 +230,69 @@ where ti.mintId in (${mintIds.map(id => `'${id}'`).join(', ')})`;
   return query;
 }
 
-const buildTradedUserQuery = (userIds: string[]): string => {
-  const query = `SELECT DISTINCT tu.userId as userId FROM TradedUser tu
-  WHERE userId IN (${userIds.map(id => `'${id}'`).join(', ')})`;
-  return query;
-}
-
-const getFreshWallets = async (topHolderIds: string[], pairId: string): Promise<any[]> => {
-  try {
-    const freshWalletQuery = buildFreshWalletQuery(topHolderIds);
-    const result = await ClickHouseService.queryMany<any>(freshWalletQuery, {});
-    return result || [];
-  } catch (error) {
-    console.error("Error in when get fresh wallet db", error);
-    return [];
-  }
-}
 
 const buildeGetTopHolderDetailsQuery = (userIds: string[], mintId: string): string => {
   const query = `SELECT 
-  userId,
-  SUM(CASE WHEN isBuy = 1 THEN tokenPrice * tokenAmount ELSE 0 END) / 
-  NULLIF(SUM(CASE WHEN isBuy = 1 THEN tokenAmount ELSE 0 END), 0) AS entryPrice,
-  SUM(CASE WHEN isBuy = 1 THEN tokenAmount ELSE 0 END) AS totalBuy,
-  SUM(CASE WHEN isBuy = 0 THEN tokenAmount ELSE 0 END) AS totalSell
-  FROM Trading
-  WHERE mintId = '${mintId}'
-  AND userId IN (${userIds.map(id => `'${id}'`).join(', ')}) GROUP BY userId`;
+        wallet,
+        SUM(CASE WHEN tradeType = 1 THEN priceInUsd * tokenAmount ELSE 0 END) / 
+        NULLIF(SUM(CASE WHEN tradeType = 1 THEN tokenAmount ELSE 0 END), 0) AS entryPrice,
+        SUM(CASE WHEN tradeType = 1 THEN tokenAmount ELSE 0 END) AS totalBuy,
+        SUM(CASE WHEN tradeType = 2 THEN tokenAmount ELSE 0 END) AS totalSell
+        FROM Z99SCAN.Trading
+        WHERE token = '${mintId}'
+        AND wallet IN (${userIds.map(id => `'${id}'`).join(', ')}) GROUP BY wallet`;
   return query;
 }
+
+const processTopFirstBuyer = (data: UserFirstBuyInfo[], chain: string) => {
+  if (data && data.length > 0) {
+      const vpBlockNumber = data[0]?.vpBlockNumber;
+      const bundleSet = new Set<string>();
+      if (chain == 'sol') {
+          let lastIndex = null;
+          let bundleEnded = false;
+          const sortedSameBlock = data
+              .filter(item => item.blockNumber === vpBlockNumber)
+              .sort((a, b) => a.indexNumber - b.indexNumber);
+
+          for (let i = 0; i < sortedSameBlock.length; i++) {
+              const item = sortedSameBlock[i];
+              const key = `${item.blockNumber}-${item.indexNumber}`;
+
+              if (bundleEnded) break;
+
+              if (lastIndex === null || item.indexNumber - lastIndex <= 64) {
+                  bundleSet.add(key);
+                  lastIndex = item.indexNumber;
+              } else {
+                  bundleEnded = true;
+              }
+          }
+
+          return data.map(item => {
+              const key = `${item.blockNumber}-${item.indexNumber}`;
+
+              if (item.blockNumber === vpBlockNumber && bundleSet.has(key)) {
+                  return { ...item, tradeType: 2 };
+              }
+
+              if (
+                  (item.blockNumber === vpBlockNumber && !bundleSet.has(key)) ||
+                  item.blockNumber === vpBlockNumber + 1
+              ) {
+                  return { ...item, tradeType: 1 };
+              }
+
+              return { ...item, tradeType: 0 };
+          });
+      }
+      else {
+          return data.map(item => {
+              if (item.blockNumber === vpBlockNumber) {
+                  return { ...item, tradeType: 2 };
+              }
+              return { ...item, tradeType: 0 };
+          });
+      }
+  }
+};
