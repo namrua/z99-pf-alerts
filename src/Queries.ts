@@ -228,7 +228,7 @@ export const ClickHouseQuery = {
         LIMIT 30`,
 
     GET_TOKEN_PRICE: `SELECT t.priceInUsd as tokenPrice FROM Z99SCAN.Trading t 
-        WHERE t.token = '9Z6v7py8CoyPMLVn4pA7oTGcbeFNm1hnLJbkSftTwcXx'
+        WHERE t.token = '{mintId}'
         ORDER BY t.createdDate DESC 
         LIMIT 1`
 }

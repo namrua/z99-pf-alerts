@@ -73,7 +73,7 @@ export const sendNotification = async (mintId: string, currentPriceInUsd: any, r
       const [dexInfo, userRoles, deployerHistory, topHolderDetails, dbTokenPrice] = await Promise.all([
         DexscreenerService.getDexscreenerData(mintId, isDisableCache),
         ClickHouseService.queryMany<UserRole>(ClickHouseQuery.COUNT_USER_ROLES, { mintId }),
-        ClickHouseService.query<DeployerHistory>(ClickHouseQuery.GET_DEPLOYER_HISTORY, { mintId }),
+        ClickHouseService.query<DeployerHistory>(ClickHouseQuery.GET_DEPLOYER_HISTORY, { deployerId }),
         ClickHouseService.queryMany<TopHolderDetails>(topHolderDetailsQuery, {}),
         ClickHouseService.query<any>(ClickHouseQuery.GET_TOKEN_PRICE, { mintId }),
       ]) as unknown as [DexscreenerSecurity, UserRole[], DeployerHistory, TopHolderDetails[], any];
